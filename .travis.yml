@@ -1,0 +1,15 @@
+sudo: required
+dist: trusty
+language: python
+matrix:
+  include:
+    # Toggle python version here
+    # python: 2.7
+    - python: 3.6
+install:
+  # Add your pip installs here
+  - pip install requests
+
+
+script:
+  - python run.py
