@@ -1,6 +1,5 @@
 import os
 import smtplib
-import email
 from email.mime.multipart import MIMEMultipart as MM
 from email.mime.text import MIMEText as MT
 
@@ -13,8 +12,7 @@ passw = os.environ["NOTIFICATION_EMAIL_PASS"]
 
 class Mailer:
     def __init__(self):
-        self.server = smtplib.SMTP()
-        self.server.connect(smtp_host, smtp_port)
+        self.server = smtplib.SMTP(smtp_host, smtp_port)
         self.server.ehlo()
         self.server.starttls()
         self.server.login(user, passw)
