@@ -17,9 +17,8 @@ class Mailer:
         self.server.starttls()
         self.server.login(user, passw)
 
-    def _mail(self, to_address, subject, body):
+    def _mail(self, tolist, subject, body):
         fromaddr = "[Kerala AI Initiative] Notification"
-        tolist = to_address  # expects a list
 
         msg = MM()
         msg['From'] = fromaddr
@@ -29,12 +28,12 @@ class Mailer:
         msg.attach(MT('\n- Kerala AI Initiative', 'plain'))
         self.server.sendmail(user, tolist, msg.as_string())
 
-    def mail(self, to_address, subject, body):
+    def mail(self, tolist, subject, body):
         try:
-            if isinstance(to_address, str):
-                self._mail([to_address], subject, body)
+            if isinstance(tolist, str):
+                self._mail([tolist], subject, body)
             else:
-                self._mail(to_address, subject, body)
+                self._mail(tolist, subject, body)
             return True
         except Exception as e:
             print (e)

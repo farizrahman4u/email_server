@@ -12,10 +12,10 @@ config = {
 }
 firebase = pyrebase.initialize_app(config)
 auth = firebase.auth()
-user = "notification.keralaai@gmail.com"
+email = "notification.keralaai@gmail.com"
 passw = os.environ["NOTIFICATION_EMAIL_PASS"]
 login_time = datetime.datetime.now()
-user = auth.sign_in_with_email_and_password(user, passw)
+user = auth.sign_in_with_email_and_password(email, passw)
 db = firebase.database()
 
 # Set up mailer
@@ -60,9 +60,12 @@ def get_user_data(key):
     return u
 
 
-def get_question_mail_message(title, user):
-    user = get_user_data(user)
-    message = "New questions \"{}\" from \"{}\" ".format(title, user.get('displayName'))
+def get_question_mail_message(title, u):
+    u = get_user_data(u)
+    if u is not None:
+        message = "New questions \"{}\" from \"{}\" ".format(title, u.get('displayName'))
+    else:  # deleted user
+        message = "New question \"{}\"".format(title)
     return message
 
 
@@ -81,15 +84,16 @@ def question_mail(key, title, author):
             set_mailed_question(key)
 
 
-def answer_mail(key, title, user):
+def answer_mail(key, title, u):
     if not check_mailed_answer(key):
-        user = get_user_data(user)
-        toaddr = user.get('email')
-        message = get_answer_mail_message(title)
-        subject = "Question answered"
-        OK = mailer.mail(toaddr, subject, message)
-        if OK:  # maybe it will work next time
-            set_mailed_answer(key)
+        u = get_user_data(u)
+        if u is not None:  # deleted user
+            toaddr = u.get('email')
+            message = get_answer_mail_message(title)
+            subject = "Question answered"
+            OK = mailer.mail(toaddr, subject, message)
+            if OK:  # maybe it will work next time
+                set_mailed_answer(key)
 
 
 if __name__ == '__main__':
