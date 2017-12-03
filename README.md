@@ -1,3 +1,3 @@
 # email_server
 
-> Use only python > 3.6 ( we need ordered dict )
+Mails the respective users or admins about new question or answer.

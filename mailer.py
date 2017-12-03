@@ -28,14 +28,19 @@ class Mailer:
         msg['To'] = ', '.join(tolist)
         msg['Subject'] = subject
         msg.attach(MT(body))
-        msg.attach(MT('\n- Kerala AI', 'plain'))
+        msg.attach(MT('\n- Kerala AI Initiative', 'plain'))
         self.server.sendmail(user, tolist, msg.as_string())
 
     def mail(self, to_address, subject, body):
         try:
-            self._mail([to_address], subject, body)
+            if isinstance(to_address, str):
+                self._mail([to_address], subject, body)
+            else:
+                self._mail(to_address, subject, body)
+            return True
         except Exception as e:
             print (e)
+            return False
 
 
 if __name__ == '__main__':
