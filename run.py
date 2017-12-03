@@ -1,29 +1,114 @@
 import os
-import smtplib
-import email
-from email.MIMEText import MIMEText
+import datetime
+import pyrebase
+from mailer import Mailer
 
-smtp_host = 'smtp.gmail.com'
-smtp_port = 587
-
-user = "notification.keralaai@gmail.com"
+# Set up firebase
+config = {
+    "apiKey": "AIzaSyCV_wkx8gh3NzFuctl6AdSZ10ZK1qkv8qY",
+    "authDomain": "free-6d535.firebaseapp.com",
+    "databaseURL": "https://free-6d535.firebaseio.com",
+    "storageBucket": "free-6d535.appspot.com",
+}
+firebase = pyrebase.initialize_app(config)
+auth = firebase.auth()
+email = "notification.keralaai@gmail.com"
 passw = os.environ["NOTIFICATION_EMAIL_PASS"]
+login_time = datetime.datetime.now()
+user = auth.sign_in_with_email_and_password(email, passw)
+db = firebase.database()
 
-server = smtplib.SMTP()
-server.connect(smtp_host, smtp_port)
-server.ehlo()
-server.starttls()
-server.login(user, passw)
+# Set up mailer
+mailer = Mailer()
 
-fromaddr = "[Kerala AI] Notification"
-tolist = ["abinsimon10@gmail.com", "fariz@logicalsteps.net"]
-sub = "You just got mailed"
-body = "Is this even a big deal? Well, I guess I will let you decide."
 
-msg = email.MIMEMultipart.MIMEMultipart()
-msg['From'] = fromaddr
-msg['To'] = email.Utils.COMMASPACE.join(tolist)
-msg['Subject'] = sub
-msg.attach(MIMEText(body))
-msg.attach(MIMEText('\n- Kerala AI', 'plain'))
-server.sendmail(user, tolist, msg.as_string())
+def get_mod_list():
+    mods = []
+    modlist = db.child("private").child("mods").get(user['idToken']).val()
+    for mod in modlist:
+        if not mod.get('mute', False):
+            mods.append(mod.get('email'))
+    return mods
+
+
+def check_mailed_question(key):
+    mailed = db.child("notify").child(key).child("qmail").get(user['idToken']).val()
+    if mailed is True:
+        return True
+    else:  # can be non binary
+        return False
+
+
+def check_mailed_answer(key):
+    mailed = db.child("notify").child(key).child("amail").get(user['idToken']).val()
+    if mailed is True:
+        return True
+    else:  # can be non binary
+        return False
+
+
+def set_mailed_question(key):
+    db.child("notify").child(key).child("qmail").set(True, user['idToken'])
+
+
+def set_mailed_answer(key):
+    db.child("notify").child(key).child("amail").set(True, user['idToken'])
+
+
+def get_user_data(key):
+    u = db.child("users").child(key).get(user['idToken']).val()
+    return u
+
+
+def get_question_mail_message(title, u):
+    u = get_user_data(u)
+    if u is not None:
+        message = "New questions \"{}\" from \"{}\" ".format(title, u.get('displayName'))
+    else:  # deleted user
+        message = "New question \"{}\"".format(title)
+    return message
+
+
+def get_answer_mail_message(title):
+    message = "Your question \"{}\" has been answered.".format(title)
+    return message
+
+
+def question_mail(key, title, author):
+    if not check_mailed_question(key):
+        toaddr = get_mod_list()
+        subject = "New question"
+        message = get_question_mail_message(title, author)
+        OK = mailer.mail(toaddr, subject, message)
+        if OK:  # maybe it will work next time
+            set_mailed_question(key)
+
+
+def answer_mail(key, title, u):
+    if not check_mailed_answer(key):
+        u = get_user_data(u)
+        if u is not None:  # deleted user
+            toaddr = u.get('email')
+            message = get_answer_mail_message(title)
+            subject = "Question answered"
+            OK = mailer.mail(toaddr, subject, message)
+            if OK:  # maybe it will work next time
+                set_mailed_answer(key)
+
+
+if __name__ == '__main__':
+    threads = db.child("threads").get(user['idToken']).val()
+    for thread, value in threads.items():
+        # in case auth timed out
+        if ((datetime.datetime.now() - login_time) > datetime.timedelta(minutes=45)):
+            login_time = datetime.datetime.now()
+            user = auth.refresh(user['refreshToken'])
+
+        answered = False
+        posts = value.get('posts')
+        title = value.get('title')
+        author = value.get('user')
+        if posts:
+            answered = True
+        question_mail(thread, title, author)
+        answer_mail(thread, title, author)
