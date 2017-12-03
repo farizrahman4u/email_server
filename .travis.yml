@@ -8,6 +8,7 @@ matrix:
 install:
   # Add your pip installs here
   - pip install requests
+  - pip install pyrebase
 
 
 script:
